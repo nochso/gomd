@@ -35,7 +35,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/asset/", http.StripPrefix("/asset/", http.FileServer(http.Dir("asset"))))
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	mux.HandleFunc("/", RootHandler)
 
 	go WaitForServer(args.Port)
@@ -60,8 +60,8 @@ func RootHandler(w http.ResponseWriter, req *http.Request) {
 	//	for _, fi := range fis {
 	//		io.WriteString(w, fi.Name()+"<br>")
 	//	}
-	io.WriteString(w, "<link rel=\"stylesheet\" href=\"asset/css/font-awesome.min.css\">")
-	io.WriteString(w, "<link rel=\"stylesheet\" href=\"asset/css/simplemde.min.css\"><script src=\"asset/js/simplemde.min.js\"></script>")
+	io.WriteString(w, "<link rel=\"stylesheet\" href=\"static/css/font-awesome.min.css\">")
+	io.WriteString(w, "<link rel=\"stylesheet\" href=\"static/css/simplemde.min.css\"><script src=\"static/js/simplemde.min.js\"></script>")
 	io.WriteString(w, "<textarea></textarea>")
 	io.WriteString(w, "<script>var simplemde = new SimpleMDE({autoDownloadFontAwesome: false, spellChecker: false });</script>")
 }
