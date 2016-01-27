@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
+	"github.com/toqueteos/webbrowser"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -82,6 +82,7 @@ func WaitForServer(port string) {
 		break
 	}
 	log.Println("Opening " + url)
-	command := exec.Command("explorer", url)
-	_ = command.Run()
+	if err := webbrowser.Open(url); err != nil {
+		log.Fatal(err)
+	}
 }
