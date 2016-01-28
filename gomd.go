@@ -1,74 +1,62 @@
 package main
 
 import (
-	"flag"
+	"fmt"
+	"github.com/alecthomas/template"
 	"github.com/toqueteos/webbrowser"
-	"io"
+	"gopkg.in/alecthomas/kingpin.v2"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 )
 
-type Configuration struct {
-	Port         string
-	DocumentRoot string
-	ShowHelp     bool
+var (
+	port = kingpin.Flag("port", "Listening port used by webserver").Short('p').Default("1110").Int()
+	file = kingpin.Arg("file", "Markdown file").String()
+)
+
+type EditorView struct {
+	File    string
+	Content string
 }
 
-var args Configuration
-
 func main() {
-	//	wd, err := os.Getwd()
-	//	if err != nil {
-	//		wd = "."
-	//	}
-	flag.StringVar(&args.DocumentRoot, "d", ".", "Document root")
-	flag.StringVar(&args.Port, "p", "12345", "Listening port used by webserver")
-	flag.BoolVar(&args.ShowHelp, "h", false, "Show this help")
-	flag.Parse()
-
-	if args.ShowHelp {
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
+	kingpin.Version("0.0.1")
+	kingpin.Parse()
 
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	mux.HandleFunc("/", RootHandler)
 
-	go WaitForServer(args.Port)
-	err := http.ListenAndServe(":"+args.Port, mux)
+	go WaitForServer(port)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), mux)
 	if err != nil {
 		log.Fatal("Failed to listen and serve: ", err)
 	}
 }
 
 func RootHandler(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-type", "text/html")
-	io.WriteString(w, req.URL.String()+"<br>")
-	io.WriteString(w, req.RequestURI+"<br>")
-	io.WriteString(w, "hello, world!<br>")
-	files, _ := filepath.Glob("*.md")
-	for _, file := range files {
-		io.WriteString(w, "<a href=\"#\">"+file+"</a><br>")
+	t := template.New("base.html")
+	t, err := t.ParseFiles("template/base.html")
+	if err != nil {
+		log.Fatalf("Unable to parse template: ", err)
 	}
-
-	//	cwd, _ := os.Getwd()
-	//	fis, _ := ioutil.ReadDir(cwd)
-	//	for _, fi := range fis {
-	//		io.WriteString(w, fi.Name()+"<br>")
-	//	}
-	io.WriteString(w, "<link rel=\"stylesheet\" href=\"static/css/font-awesome.min.css\">")
-	io.WriteString(w, "<link rel=\"stylesheet\" href=\"static/css/simplemde.min.css\"><script src=\"static/js/simplemde.min.js\"></script>")
-	io.WriteString(w, "<textarea></textarea>")
-	io.WriteString(w, "<script>var simplemde = new SimpleMDE({autoDownloadFontAwesome: false, spellChecker: false });</script>")
+	w.Header().Set("Content-type", "text/html")
+	content, err := ioutil.ReadFile(*file)
+	if err != nil {
+		log.Fatalf("Unable to open file " + *file)
+	}
+	ev := EditorView{File: *file, Content: string(content)}
+	err = t.Execute(w, ev)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
-func WaitForServer(port string) {
-	log.Print("Waiting for listener on port " + port)
-	url := "http://localhost:" + port
+func WaitForServer(port *int) {
+	log.Printf("Waiting for listener on port %d", *port)
+	url := fmt.Sprintf("http://localhost:%d", *port)
 	for {
 		time.Sleep(time.Millisecond * 50)
 		resp, err := http.Get(url)
