@@ -7,18 +7,23 @@ import (
 	"github.com/toqueteos/webbrowser"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"time"
-	"io"
 )
 
-var (
-	port = kingpin.Flag("port", "Listening port used by webserver").Short('p').Default("1110").Int()
-	file = kingpin.Arg("file", "Markdown file").String()
-)
+type InputArgs struct {
+	Port *int
+	File *string
+}
+
+var args = InputArgs{
+	Port: kingpin.Flag("port", "Listening port used by webserver").Short('p').Default("1110").Int(),
+	File: kingpin.Arg("file", "Markdown file").String(),
+}
 
 type EditorView struct {
 	File    string
@@ -45,8 +50,8 @@ func main() {
 	edit.Get("/*", EditHandler)
 	edit.Post("/*", EditHandler)
 
-	go WaitForServer(port)
-	e.Run(fmt.Sprintf("127.0.0.1:%d", *port))
+	go WaitForServer()
+	e.Run(fmt.Sprintf("127.0.0.1:%d", *args.Port))
 }
 
 type Template struct {
@@ -72,9 +77,9 @@ func EditHandler(c *echo.Context) error {
 	return c.Render(http.StatusOK, "base", ev)
 }
 
-func WaitForServer(port *int) {
-	log.Printf("Waiting for listener on port %d", *port)
-	url := fmt.Sprintf("http://localhost:%d/edit/%s", *port, url.QueryEscape(*file))
+func WaitForServer() {
+	log.Printf("Waiting for listener on port %d", *args.Port)
+	url := fmt.Sprintf("http://localhost:%d/edit/%s", *args.Port, url.QueryEscape(*args.File))
 	for {
 		time.Sleep(time.Millisecond * 50)
 		resp, err := http.Get(url)
