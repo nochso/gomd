@@ -97,9 +97,6 @@ func WaitForServer() {
 			continue
 		}
 		resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			continue
-		}
 		break
 	}
 	log.Println("Opening " + url)
