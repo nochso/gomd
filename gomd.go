@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/alecthomas/template"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"github.com/toqueteos/webbrowser"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
@@ -25,19 +27,20 @@ func main() {
 	kingpin.Version("0.0.1")
 	kingpin.Parse()
 
-	mux := http.NewServeMux()
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	mux.HandleFunc("/", RootHandler)
+	e := echo.New()
+
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+
+	e.Static("/static/", "static")
+	e.Get("/", RootHandler)
+	e.Post("/", RootHandler)
 
 	go WaitForServer(port)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), mux)
-	if err != nil {
-		log.Fatal("Failed to listen and serve: ", err)
-	}
+	e.Run(fmt.Sprintf(":%d", *port))
 }
 
 func RootHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("%s %s", req.Method, req.URL)
 	if req.Method == "POST" {
 		req.ParseForm()
 		ioutil.WriteFile(*file, []byte(req.PostForm.Get("content")), 0644)
