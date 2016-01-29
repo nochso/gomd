@@ -37,6 +37,11 @@ func main() {
 }
 
 func RootHandler(w http.ResponseWriter, req *http.Request) {
+	log.Printf("%s %s", req.Method, req.URL)
+	if req.Method == "POST" {
+		req.ParseForm()
+		ioutil.WriteFile(*file, []byte(req.PostForm.Get("content")), 0644)
+	}
 	t := template.New("base.html")
 	t, err := t.ParseFiles("template/base.html")
 	if err != nil {

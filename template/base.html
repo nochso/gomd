@@ -11,7 +11,10 @@
     <script src="static/js/simplemde.min.js"></script>
 </head>
 <body>
-<textarea>{{.Content}}</textarea>
-<script>var simplemde = new SimpleMDE({autoDownloadFontAwesome: false, spellChecker: false});</script>
+    <form method="post">
+        <textarea name="content">{{.Content}}</textarea>
+        <button type="submit">Save</button>
+    </form>
+    <script>var simplemde = new SimpleMDE({autoDownloadFontAwesome: false, spellChecker: false});</script>
 </body>
 </html>
