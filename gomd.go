@@ -5,6 +5,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/toqueteos/webbrowser"
+	"github.com/GeertJohan/go.rice"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"html/template"
 	"io"
@@ -31,20 +32,29 @@ type EditorView struct {
 }
 
 func main() {
+	// Parse command line arguments
 	kingpin.Version("0.0.1")
 	kingpin.Parse()
+
+	// Prepare (optionally) embedded resources
+	templateBox := rice.MustFindBox("template")
+	staticHttpBox := rice.MustFindBox("static").HTTPBox()
+	staticServer := http.StripPrefix("/static/", http.FileServer(staticHttpBox))
 
 	e := echo.New()
 
 	t := &Template{
-		templates: template.Must(template.ParseGlob("template/*.html")),
+		templates: template.Must(template.New("base").Parse(templateBox.MustString("base.html"))),
 	}
 	e.SetRenderer(t)
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	e.Static("/static/", "static")
+	e.Get("/static/*", func(c *echo.Context) error {
+		staticServer.ServeHTTP(c.Response().Writer(), c.Request())
+		return nil
+	})
 
 	edit := e.Group("/edit")
 	edit.Get("/*", EditHandler)
