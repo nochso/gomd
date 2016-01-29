@@ -37,7 +37,7 @@ func main() {
 	e.Post("/", RootHandler)
 
 	go WaitForServer(port)
-	e.Run(fmt.Sprintf(":%d", *port))
+	e.Run(fmt.Sprintf("127.0.0.1:%d", *port))
 }
 
 func RootHandler(w http.ResponseWriter, req *http.Request) {
