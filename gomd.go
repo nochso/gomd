@@ -2,15 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/alecthomas/template"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/toqueteos/webbrowser"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
+	"io"
 )
 
 var (
@@ -29,42 +31,50 @@ func main() {
 
 	e := echo.New()
 
+	t := &Template{
+		templates: template.Must(template.ParseGlob("template/*.html")),
+	}
+	e.SetRenderer(t)
+
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
 	e.Static("/static/", "static")
-	e.Get("/", RootHandler)
-	e.Post("/", RootHandler)
+
+	edit := e.Group("/edit")
+	edit.Get("/*", EditHandler)
+	edit.Post("/*", EditHandler)
 
 	go WaitForServer(port)
 	e.Run(fmt.Sprintf("127.0.0.1:%d", *port))
 }
 
-func RootHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method == "POST" {
-		req.ParseForm()
-		ioutil.WriteFile(*file, []byte(req.PostForm.Get("content")), 0644)
+type Template struct {
+	templates *template.Template
+}
+
+func (t *Template) Render(w io.Writer, name string, data interface{}) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
+
+func EditHandler(c *echo.Context) error {
+	filepath := c.P(0)
+	if c.Request().Method == "POST" {
+		c.Request().ParseForm()
+		ioutil.WriteFile(filepath, []byte(c.Request().PostForm.Get("content")), 0644)
 	}
-	t := template.New("base.html")
-	t, err := t.ParseFiles("template/base.html")
+	content, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		log.Fatalf("Unable to parse template: ", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Unable to read requested file")
+		log.Fatalf("Unable to open file " + filepath)
 	}
-	w.Header().Set("Content-type", "text/html")
-	content, err := ioutil.ReadFile(*file)
-	if err != nil {
-		log.Fatalf("Unable to open file " + *file)
-	}
-	ev := EditorView{File: *file, Content: string(content)}
-	err = t.Execute(w, ev)
-	if err != nil {
-		log.Println(err)
-	}
+	ev := EditorView{File: filepath, Content: string(content)}
+	return c.Render(http.StatusOK, "base", ev)
 }
 
 func WaitForServer(port *int) {
 	log.Printf("Waiting for listener on port %d", *port)
-	url := fmt.Sprintf("http://localhost:%d", *port)
+	url := fmt.Sprintf("http://localhost:%d/edit/%s", *port, url.QueryEscape(*file))
 	for {
 		time.Sleep(time.Millisecond * 50)
 		resp, err := http.Get(url)
