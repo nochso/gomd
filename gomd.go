@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/GeertJohan/go.rice"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/toqueteos/webbrowser"
-	"github.com/GeertJohan/go.rice"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"html/template"
 	"io"
