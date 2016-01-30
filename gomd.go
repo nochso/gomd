@@ -81,7 +81,6 @@ func EditHandler(c *echo.Context) error {
 	content, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Unable to read requested file")
-		log.Fatalf("Unable to open file " + filepath)
 	}
 	ev := EditorView{File: filepath, Content: string(content)}
 	return c.Render(http.StatusOK, "base", ev)
