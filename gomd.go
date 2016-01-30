@@ -38,8 +38,8 @@ func main() {
 
 	// Prepare (optionally) embedded resources
 	templateBox := rice.MustFindBox("template")
-	staticHttpBox := rice.MustFindBox("static").HTTPBox()
-	staticServer := http.StripPrefix("/static/", http.FileServer(staticHttpBox))
+	staticHTTPBox := rice.MustFindBox("static").HTTPBox()
+	staticServer := http.StripPrefix("/static/", http.FileServer(staticHTTPBox))
 
 	e := echo.New()
 
