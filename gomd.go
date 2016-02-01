@@ -58,7 +58,7 @@ func main() {
 
 	edit := e.Group("/edit")
 	edit.Get("/*", EditHandler)
-	edit.Post("/*", EditHandler)
+	edit.Post("/*", EditHandlerPost)
 
 	go WaitForServer()
 	e.Run(fmt.Sprintf("127.0.0.1:%d", *args.Port))
@@ -74,16 +74,19 @@ func (t *Template) Render(w io.Writer, name string, data interface{}) error {
 
 func EditHandler(c *echo.Context) error {
 	filepath := c.P(0)
-	if c.Request().Method == "POST" {
-		c.Request().ParseForm()
-		ioutil.WriteFile(filepath, []byte(c.Request().PostForm.Get("content")), 0644)
-	}
 	content, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Unable to read requested file")
 	}
 	ev := EditorView{File: filepath, Content: string(content)}
 	return c.Render(http.StatusOK, "base", ev)
+}
+
+func EditHandlerPost(c *echo.Context) error {
+	filepath := c.P(0)
+	c.Request().ParseForm()
+	ioutil.WriteFile(filepath, []byte(c.Request().PostForm.Get("content")), 0644)
+	return EditHandler(c)
 }
 
 func WaitForServer() {
