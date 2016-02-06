@@ -103,6 +103,6 @@ func WaitForServer() {
 	}
 	log.Println("Opening " + url)
 	if err := webbrowser.Open(url); err != nil {
-		log.Fatal(err)
+		log.Printf("Possible error while opening browser: %s", err)
 	}
 }
