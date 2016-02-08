@@ -30,6 +30,9 @@ Args:
   [<file>]  Markdown file
 ```
 
+## Changes
+See the [CHANGELOG](CHANGELOG.md) for the full history of changes between releases.
+
 ## License
 This project is licensed under the MIT license. See the [LICENSE](LICENSE.md) file for the full license text.
 
