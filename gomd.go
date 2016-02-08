@@ -5,6 +5,7 @@ import (
 	"github.com/GeertJohan/go.rice"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	"github.com/nochso/gomd/eol"
 	"github.com/toqueteos/webbrowser"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"html/template"
@@ -13,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -27,8 +29,18 @@ var args = InputArgs{
 }
 
 type EditorView struct {
-	File    string
-	Content string
+	File              string
+	Content           string
+	LineEndings       map[int]string
+	CurrentLineEnding eol.LineEnding
+}
+
+func NewEditorView(filepath string, content string) *EditorView {
+	return &EditorView{
+		File:        filepath,
+		Content:     content,
+		LineEndings: eol.Descriptions,
+	}
 }
 
 func main() {
@@ -73,19 +85,35 @@ func (t *Template) Render(w io.Writer, name string, data interface{}) error {
 }
 
 func EditHandler(c *echo.Context) error {
-	filepath := c.P(0)
-	content, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Unable to read requested file")
+	var ev *EditorView
+	ev, ok := c.Get("editorView").(*EditorView)
+	if !ok {
+		log.Println("reading file")
+		filepath := c.P(0)
+		content, err := ioutil.ReadFile(filepath)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Unable to read requested file")
+		}
+		ev = NewEditorView(filepath, string(content))
+		ev.CurrentLineEnding = eol.DetectDefault(ev.Content, eol.OSDefault())
+		log.Println(ev.CurrentLineEnding.Description())
 	}
-	ev := EditorView{File: filepath, Content: string(content)}
 	return c.Render(http.StatusOK, "base", ev)
 }
 
 func EditHandlerPost(c *echo.Context) error {
 	filepath := c.P(0)
 	c.Request().ParseForm()
-	ioutil.WriteFile(filepath, []byte(c.Request().PostForm.Get("content")), 0644)
+	form := c.Request().PostForm
+	eolIndex, _ := strconv.Atoi(form.Get("eol"))
+	content := form.Get("content")
+	convertedContent, err := eol.LineEnding(eolIndex).Apply(content)
+	if err != nil {
+		convertedContent = content
+		log.Println("Error while converting EOL. Saving without conversion.")
+	}
+	ioutil.WriteFile(filepath, []byte(convertedContent), 0644)
+	c.Set("editorView", NewEditorView(filepath, content))
 	return EditHandler(c)
 }
 

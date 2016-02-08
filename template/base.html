@@ -12,11 +12,36 @@
     <script src="/static/js/simplemde.min.js"></script>
 </head>
 <body>
-    <form method="post">
-        <textarea name="content">{{.Content}}</textarea>
-        <button type="submit">Save</button>
-    </form>
-    <script>var simplemde = new SimpleMDE({autoDownloadFontAwesome: false, spellChecker: false});</script>
+<script src="/static/js/jquery.min.js"></script>
+<form id="editorForm" method="post">
+    <textarea name="content">{{.Content}}</textarea>
+    <button type="submit" id="btnsave">Save</button>
+    <select name="eol">
+        {{ $currentLineEnding := .CurrentLineEnding }}
+        {{ range $index, $element := .LineEndings }}
+        <option value="{{ $index }}"{{ if eq $index $currentLineEnding }} selected{{ end }}>{{ $element }}</option>
+        {{ end }}
+    </select>
+</form>
+<script>
+$(document).ready(function () {
+    var simplemde = new SimpleMDE({
+        autoDownloadFontAwesome: false,
+        spellChecker: false
+    });
+    $("#btnsave").click(function (event) {
+        var postData = {};
+        $.each($('#editorForm').serializeArray(), function(i, field) {
+            postData[field.name] = field.value;
+        });
+        postData["content"] = simplemde.value();
+        $.post('', postData, function () {
+            console.log("saved");
+        });
+        event.preventDefault();
+    });
+});
+</script>
 </body>
 </html>
 {{end}}
