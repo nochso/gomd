@@ -2,12 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/GeertJohan/go.rice"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
-	"github.com/nochso/gomd/eol"
-	"github.com/toqueteos/webbrowser"
-	"gopkg.in/alecthomas/kingpin.v2"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -16,6 +10,14 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/GeertJohan/go.rice"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/engine/standard"
+	"github.com/labstack/echo/middleware"
+	"github.com/nochso/gomd/eol"
+	"github.com/toqueteos/webbrowser"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 type InputArgs struct {
@@ -63,28 +65,25 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	e.Get("/static/*", func(c *echo.Context) error {
-		staticServer.ServeHTTP(c.Response().Writer(), c.Request())
-		return nil
-	})
+	e.GET("/static/*", standard.WrapHandler(staticServer))
 
 	edit := e.Group("/edit")
 	edit.Get("/*", EditHandler)
 	edit.Post("/*", EditHandlerPost)
 
 	go WaitForServer()
-	e.Run(fmt.Sprintf("127.0.0.1:%d", *args.Port))
+	e.Run(standard.New(fmt.Sprintf("127.0.0.1:%d", *args.Port)))
 }
 
 type Template struct {
 	templates *template.Template
 }
 
-func (t *Template) Render(w io.Writer, name string, data interface{}) error {
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 
-func EditHandler(c *echo.Context) error {
+func EditHandler(c echo.Context) error {
 	var ev *EditorView
 	ev, ok := c.Get("editorView").(*EditorView)
 	if !ok {
@@ -101,12 +100,10 @@ func EditHandler(c *echo.Context) error {
 	return c.Render(http.StatusOK, "base", ev)
 }
 
-func EditHandlerPost(c *echo.Context) error {
+func EditHandlerPost(c echo.Context) error {
 	filepath := c.P(0)
-	c.Request().ParseForm()
-	form := c.Request().PostForm
-	eolIndex, _ := strconv.Atoi(form.Get("eol"))
-	content := form.Get("content")
+	eolIndex, _ := strconv.Atoi(c.FormValue("eol"))
+	content := c.FormValue("content")
 	convertedContent, err := eol.LineEnding(eolIndex).Apply(content)
 	if err != nil {
 		convertedContent = content
